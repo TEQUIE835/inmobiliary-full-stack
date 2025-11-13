@@ -1,0 +1,111 @@
+# === Build folders ===
+**/bin/
+**/obj/
+**/out/
+
+
+# === IDE / Editor files ===# === Build folders ===
+**/bin/
+**/obj/
+**/out/
+
+# === IDE / Editor files ===
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# === Configuration ===
+**/config/
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.json
+
+# === Logs ===
+*.log
+
+# === Test / Coverage ===
+TestResults/
+*.coverage
+*.coveragexml
+*.trx
+
+# === Dependency caches ===
+packages/
+.nuget/
+node_modules/
+npm-debug.log*
+
+# === System files ===
+Thumbs.db
+ehthumbs.db# === Build folders ===
+**/bin/
+**/obj/
+**/out/
+
+# === IDE / Editor files ===
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# === Configuration ===
+**/config/
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.json
+**/.env
+
+# === Logs ===
+*.log
+
+# === Test / Coverage ===
+TestResults/
+*.coverage
+*.coveragexml
+*.trx
+
+# === Dependency caches ===
+packages/
+.nuget/
+node_modules/
+npm-debug.log*
+
+# === System files ===
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# === MacOS ===
+.DS_Store
+
+# === JetBrains Rider ===
+.idea/
+*.iml
+
+# === Temporary ===
+*.tmp
+*.temp
+
+Desktop.ini
+$RECYCLE.BIN/
+
+# === MacOS ===
+.DS_Store
+
+# === JetBrains Rider ===
+.idea/
+*.iml
+
+# === Temporary ===
+*.tmp
+*.temp
+
+ca.pem
