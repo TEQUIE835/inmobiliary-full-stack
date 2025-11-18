@@ -1,64 +1,105 @@
+using System.Threading.Tasks;
 using inmobiliaryApi.Application.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 
 namespace inmobiliaryApi.Api.Controllers;
 
 [ApiController]
-[Route("api/auth")]
+[Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly AuthService _service;
+    private readonly AuthService _authService;
 
-    public AuthController(AuthService service)
+    public AuthController(AuthService authService)
     {
-        _service = service;
+        _authService = authService;
     }
 
-    [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
-    {
-        var result = await _service.RefreshAccessToken(request.RefreshToken);
-        if (result == null)
-            return Unauthorized(new { message = "Token invalido o expirado." });
-        return Ok(result);
-    }
-
-    public record RefreshTokenRequest(string RefreshToken);
-
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
-    {
-        var token = await _service.Authenticate(request.Email, request.Password);
-        if (token == null)
-        {
-            return Unauthorized(new { message = "El usuario o la contraseña no coinciden." });
-        }
-
-        return Ok(token);
-    }
-
+    // DTOs simples para las peticiones
+    public record RegisterRequest(string Username, string Email, string Password);
     public record LoginRequest(string Email, string Password);
+    public record RefreshRequest(string RefreshToken);
 
+    // POST: api/Auth/register
     [HttpPost("register")]
+    [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        var success = await _service.Register(request.Username, request.Password, request.Email);
-        if (!success)
-            return BadRequest(new { message = "El usuario ya existe." });
-        return Ok(new { message = "El usuario se ha registrado exitosamente." });
+        if (string.IsNullOrWhiteSpace(request.Username) ||
+            string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Password))
+        {
+            return BadRequest("Todos los campos son obligatorios.");
+        }
+
+        var registered = await _authService.Register(
+            request.Username,
+            request.Password,
+            request.Email
+        );
+
+        if (!registered)
+        {
+            return BadRequest("El username o el email ya están en uso.");
+        }
+
+        return Ok(new { message = "Usuario registrado correctamente." });
     }
 
-    public record RegisterRequest(string Username, string Password, string Email);
-
-    [HttpPost("logout")]
-    public async Task<IActionResult> Logout([FromBody] string refreshToken)
+    [HttpPost("login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        if (string.IsNullOrEmpty(refreshToken))
-            return BadRequest(new { message = "El token de actualizacion es requerido." });
+        if (string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Password))
+        {
+            return BadRequest("Correo y contraseña son obligatorios.");
+        }
 
-        await _service.DeleteRefreshToken(refreshToken);
-        return Ok(new { message = "Se ha cerrado la seccion correctamente." });
+        
+        var tokens = await _authService.Authenticate(request.Email, request.Password);
+
+        if (tokens is null)
+        {
+            return Unauthorized("Usuario o contraseña incorrectos.");
+        }
+
+        return Ok(new
+        {
+            accessToken = tokens.Value.accessToken,
+            refreshToken = tokens.Value.refreshToken
+        });
+    }
+
+
+    // POST: api/Auth/refresh
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+            return BadRequest("El refresh token es obligatorio.");
+
+        var newAccessToken = await _authService.RefreshAccessToken(request.RefreshToken);
+
+        if (newAccessToken is null)
+            return Unauthorized("Refresh token inválido o expirado.");
+
+        return Ok(new { accessToken = newAccessToken });
+    }
+
+    // POST: api/Auth/logout
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<IActionResult> Logout([FromBody] RefreshRequest request)
+    {
+        
+        if (!string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            await _authService.DeleteRefreshToken(request.RefreshToken);
+        }
+
+        return Ok(new { message = "Sesión cerrada correctamente." });
     }
 }

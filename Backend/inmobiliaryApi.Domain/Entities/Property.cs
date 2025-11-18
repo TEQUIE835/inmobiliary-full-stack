@@ -8,5 +8,5 @@ public class Property
     public double Price { get; set; }
     public string Location { get; set; }
     
-    public List<Image> Images { get; set; }
+    public List<Image>? Images { get; set; }
 }

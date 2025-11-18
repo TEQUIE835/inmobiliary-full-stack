@@ -14,45 +14,73 @@ public class AuthService
     private readonly IConfiguration _configuration;
     private readonly IAuthRepository _authRepository;
 
-    public AuthService(IUserRepository repository, IConfiguration configuration, IAuthRepository authRepository)
+    public AuthService(
+        IUserRepository repository,
+        IConfiguration configuration,
+        IAuthRepository authRepository
+    )
     {
         _repository = repository;
         _configuration = configuration;
         _authRepository = authRepository;
     }
 
+    // Registro
     public async Task<bool> Register(string username, string password, string email)
     {
-        var existingUser = await _repository.GetUserByUsername(username);
-        if (existingUser != null)
+        var existingUserByUsername = await _repository.GetUserByUsername(username);
+        if (existingUserByUsername != null)
+            return false;
+
+        var existingUserByEmail = await _repository.GetUserByEmail(email);
+        if (existingUserByEmail != null)
             return false;
 
         var user = new User
         {
             Username = username,
+            Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-            Email = email
+            Role ="User"
         };
 
         await _repository.CreateUser(user);
         return true;
     }
 
-    public async Task<(string accessToken, string refreshToken)?> Authenticate(string username, string password)
+    // Login
+    public async Task<(string accessToken, string refreshToken)?> Authenticate(string login, string password)
     {
-        var user = await _repository.GetUserByUsername(username);
-        if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        
+        var user = await _repository.GetUserByEmail(login);
+
+        
+        if (user == null)
+        {
+            user = await _repository.GetUserByUsername(login);
+        }
+
+        
+        if (user == null)
             return null;
 
+        
+        var validPassword = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
+        if (!validPassword)
+            return null;
 
+        
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, username),
+            new Claim(JwtRegisteredClaimNames.Sub, user.Username),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new Claim(ClaimTypes.Role, user.Role ?? "User"),   
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+        var key = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
+        );
         var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
@@ -65,6 +93,7 @@ public class AuthService
 
         var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
 
+        // Refresh token 
         var refreshToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
         var expiration = DateTime.UtcNow.AddDays(7);
 
@@ -75,8 +104,7 @@ public class AuthService
             UserId = user.Id
         };
 
-        await _authRepository.GetRefreshToken(refreshEntity.Token);
-
+        await _authRepository.GetRefreshToken(refreshEntity.Token); 
 
         return (accessToken, refreshToken);
     }
@@ -94,10 +122,13 @@ public class AuthService
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Username),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+        var key = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
+        );
         var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var newToken = new JwtSecurityToken(

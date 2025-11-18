@@ -7,6 +7,7 @@ namespace inmobiliaryApi.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize] 
 public class PropertyController : ControllerBase
 {
     private readonly PropertyService _service;
@@ -16,43 +17,60 @@ public class PropertyController : ControllerBase
         _service = service;
     }
 
-    [Authorize]
+    // GET: api/Property
     [HttpGet]
     public async Task<IActionResult> GetPropertiesAll()
     {
-        var property = await _service.GetAll();
-        return Ok(property);
+        var properties = await _service.GetAll();
+        return Ok(properties);
     }
 
-    [Authorize]
-    [HttpGet("{id}")]
+    // GET: api/Property/5
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> GetPropertyById(int id)
     {
         var property = await _service.GetById(id);
+
+        if (property == null)
+            return NotFound(new { message = "Propiedad no encontrada" });
+
         return Ok(property);
     }
 
+    // POST: api/Property
     [Authorize(Roles = "Admin")]
     [HttpPost]
-    public async Task<IActionResult> CreateProperty(Property property)
+    public async Task<IActionResult> CreateProperty([FromBody] Property property)
     {
         await _service.CreateProperty(property);
-        return Ok();
+        return Ok(new { message = "Propiedad creada correctamente" });
     }
 
+    // PUT: api/Property/5
     [Authorize(Roles = "Admin")]
-    [HttpPut("{property}")]
-    public async Task<IActionResult> UpdateProperty(Property property)
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> UpdateProperty(int id, [FromBody] Property property)
     {
+        if (property.Id != id)
+        {
+            return BadRequest(new { message = "El ID de la URL no coincide con el cuerpo" });
+        }
+
         await _service.UpdateProperty(property);
         return Ok(property);
     }
 
+    // DELETE: api/Property/5
     [Authorize(Roles = "Admin")]
-    [HttpDelete("{property}")]
-    public async Task<IActionResult> DeleteProperty(Property property)
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteProperty(int id)
     {
+        var property = await _service.GetById(id);
+
+        if (property == null)
+            return NotFound(new { message = "Propiedad no encontrada" });
+
         await _service.DeleteProperty(property);
-        return Ok();
+        return Ok(new { message = "Propiedad eliminada" });
     }
 }
