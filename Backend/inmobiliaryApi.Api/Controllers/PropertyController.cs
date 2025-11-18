@@ -7,7 +7,7 @@ namespace inmobiliaryApi.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // 👈 Protege TODO el controller por defecto
+[Authorize] 
 public class PropertyController : ControllerBase
 {
     private readonly PropertyService _service;
